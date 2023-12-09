@@ -8,10 +8,21 @@ namespace PMT_API.Controllers
     [Route("[controller]")]
     public class ProcessingStringController : ControllerBase
     {
+        private readonly IConfiguration _configuration;
+
+        public ProcessingStringController(IConfiguration configuration)
+        {
+            _configuration = configuration;
+        }
         [HttpGet]
         public ActionResult<string> ProcessStringAction(string str, int choice)
         {
             TreeSortAlgorithm treeSortAlgorithm = new TreeSortAlgorithm();
+
+            if (IsWordInBlackList(str))
+            {
+                return BadRequest($"Была введена не подходящая строка: {str}");
+            }
 
             if (!CheckAlphabet(str))
             {
@@ -87,15 +98,22 @@ namespace PMT_API.Controllers
 
         }
 
-        static async Task<string> GetRandomNumber(int lenMax)
+        private bool IsWordInBlackList(string word)
+        {
+            var blackList = _configuration.GetSection("Settings").GetSection("Blacklist").Get<List<string>>();
+            return blackList != null && blackList.Contains(word.ToLower());
+        }
+
+        async Task<string> GetRandomNumber(int lenMax)
         {
             lenMax -= 1;
             try
             {
                 using (HttpClient client = new HttpClient())
                 {
-                    string apiUrl = "https://www.random.org/integers/?num=1&min=0&max=" + lenMax.ToString() + "&col=1&base=10&format=plain&rnd=new";
-                    HttpResponseMessage response = await client.GetAsync(apiUrl);
+                    var apiUrl = _configuration.GetSection("RemoteApiUrl").Get<List<string>>();
+                    string url = apiUrl[0] + lenMax.ToString() + apiUrl[2];
+                    HttpResponseMessage response = await client.GetAsync(url);
 
                     if (response.IsSuccessStatusCode)
                     {
