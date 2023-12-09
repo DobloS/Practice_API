@@ -1,6 +1,6 @@
 namespace Practice_API
 {
-    public class WeatherForecast
+    public class ProcessingString
     {
         public DateTime Date { get; set; }
 
