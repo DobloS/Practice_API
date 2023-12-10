@@ -18,6 +18,9 @@ namespace PMT_API.Controllers
         public ActionResult<string> ProcessStringAction(string str, int choice)
         {
             TreeSortAlgorithm treeSortAlgorithm = new TreeSortAlgorithm();
+            RequestLimiter requestLimiter = new RequestLimiter(_configuration.GetSection("Settings").GetSection("ParallelLimit").Get<int>());
+
+            requestLimiter.ProcessRequest();
 
             if (IsWordInBlackList(str))
             {
@@ -95,7 +98,29 @@ namespace PMT_API.Controllers
             };
 
             return Ok(responseObject);
+        }
 
+        public class RequestLimiter
+        {
+            private int maxRequests;
+            private int currentRequests;
+
+            public RequestLimiter(int maxRequests)
+            {
+                this.maxRequests = maxRequests;
+                this.currentRequests = 0;
+            }
+
+            public void ProcessRequest()
+            {
+                if (Interlocked.Increment(ref currentRequests) > maxRequests)
+                {
+                    Interlocked.Decrement(ref currentRequests);
+                    throw new Exception("503 Service Unavailable");
+                }
+
+                Interlocked.Decrement(ref currentRequests);
+            }
         }
 
         private bool IsWordInBlackList(string word)
